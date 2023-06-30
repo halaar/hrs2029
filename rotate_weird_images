@@ -1,0 +1,36 @@
+import os
+from PIL import Image
+
+def analyze_and_rotate_images(directory):
+    for root, dirs, files in os.walk(directory):
+        for file in files:
+            if file.endswith(".jpg") or file.endswith(".png"):
+                image_path = os.path.join(root, file)
+                try:
+                    image = Image.open(image_path)
+                    if image.mode != 'RGB':
+                        image = image.convert('RGB')
+                    
+                    # Check image orientation
+                    if hasattr(image, '_getexif'):  # Rotate based on EXIF data if available
+                        exif = image._getexif()
+                        if exif is not None:
+                            orientation = exif.get(0x0112)
+                            if orientation is not None:
+                                if orientation == 3:
+                                    image = image.rotate(180, expand=True)
+                                elif orientation == 6:
+                                    image = image.rotate(270, expand=True)
+                                elif orientation == 8:
+                                    image = image.rotate(90, expand=True)
+                    
+                    # Save the modified image
+                    image.save(image_path)
+                    image.close()
+                except (IOError, OSError) as e:
+                    print(f"Error processing image: {image_path}")
+                    print(f"Error details: {e}")
+
+# Usage here
+directory_path = '/path/to/directory'
+analyze_and_rotate_images(directory_path)
