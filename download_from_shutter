@@ -1,0 +1,49 @@
+def download_albums(api_key, api_secret, download_path):
+    # Authenticate and get the access token
+    auth_url = "https://api.shutterfly.com/authorization/v4/accessToken"
+    auth_data = {
+        "grant_type": "client_credentials",
+        "client_id": api_key,
+        "client_secret": api_secret
+    }
+    auth_response = requests.post(auth_url, data=auth_data)
+    auth_response.raise_for_status()
+    access_token = auth_response.json()["access_token"]
+
+    # Get the list of albums
+    albums_url = "https://api.shutterfly.com/album/v4/albums"
+    headers = {
+        "Authorization": f"Bearer {access_token}"
+    }
+    albums_response = requests.get(albums_url, headers=headers)
+    albums_response.raise_for_status()
+    albums_data = albums_response.json()
+
+    # Create the download path if it doesn't exist
+    os.makedirs(download_path, exist_ok=True)
+
+    # Download each album
+    for album in albums_data["albums"]:
+        album_id = album["albumId"]
+        album_title = album["title"]
+        album_dir = os.path.join(download_path, album_title)
+        os.makedirs(album_dir, exist_ok=True)
+
+        # Get the list of album photos
+        album_photos_url = f"https://api.shutterfly.com/album/v4/albums/{album_id}/photos"
+        album_photos_response = requests.get(album_photos_url, headers=headers)
+        album_photos_response.raise_for_status()
+        album_photos_data = album_photos_response.json()
+
+        # Download each photo in the album
+        for photo in album_photos_data["photos"]:
+            photo_id = photo["photoId"]
+            photo_url = photo["urls"]["original"]
+            photo_filename = f"{photo_id}.jpg"
+            photo_path = os.path.join(album_dir, photo_filename)
+            urllib.request.urlretrieve(photo_url, photo_path)
+            print(f"Downloaded photo: {photo_path}")
+
+        print(f"Downloaded album: {album_title}")
+
+    print("All albums downloaded successfully.")
